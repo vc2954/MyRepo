@@ -1,4 +1,9 @@
 class Product < ActiveRecord::Base
+	has_many:line_items
+	# the declaration above is defining that 
+	# there could be many/multiple line_items 
+	# that refer to this/the product.
+
 	validates :title, :description, :image_url, presence: true
 	validates :price, numericality: {greater_than_or_equal_to: 0.01}
 	validates :title, uniqueness: true
@@ -21,4 +26,19 @@ class Product < ActiveRecord::Base
 		  #end	
 		  #post :create, product: @update
 		  #patch :update, id: @product, product: @update
+
+  private
+
+    # now adding a method here to make sure that the product wont be 
+    # deleted if there are any line_items referencing the product.
+    # we will use a hook method (callback) that will be called when 
+    # rails try to destroy an object.
+    def ensure_not_referenced_by_line_item
+    	if line_items.empty?
+    		return true
+    	else
+    		errors.add(:base,'Line Items Present')
+    		return false;
+    	end
+    end
 end

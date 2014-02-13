@@ -1,0 +1,40 @@
+class CombineLineItemsInCart < ActiveRecord::Migration
+  def change
+  end
+
+  def up
+    # replace multiple items for a single product in a cart with a single item
+    Cart.all do |cart|
+      # count the number of each product in the cart
+      sums= cart.line_items.group(:product_id).sum(:quantity)
+      
+      sums.each do |product_id , quantity|
+         cart.line_items.where(product_id: product_id).delete_all
+     
+        #create a new line item with current product and place the quantity
+        # as the quantity of the line item.
+        # the current quantity is calculated using a group by
+        item = cart.line_items.build(product_id: product_id)
+        #replace with a single item
+        item.quantiy=quantity
+        item.save!
+      end
+    end
+  end
+  
+
+  def down
+     #split the items with quantity greater than 0
+     # typically a quantity  of 2 needs two rows 
+     # in the event of rollback
+     LineItem.where("quantity > 1").each do |line_item|
+       # add individual items
+       line_item.quantity.times do
+           LineItem.create cart_id: line_item.cart_id, product_id: line_item.product_id, quantity:1
+          # remove original item
+          line_item.destroy
+       end
+     end
+  end
+
+end
